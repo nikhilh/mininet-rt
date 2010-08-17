@@ -50,7 +50,7 @@ from time import sleep
 
 from mininet.log import info, error, debug
 from mininet.util import quietRun, makeIntfPair, moveIntf, isShellBuiltin
-from mininet.moduledeps import moduleDeps, OVS_KMOD, OF_KMOD, TUN
+from mininet.moduledeps import moduleDeps, pathCheck, OVS_KMOD, OF_KMOD, TUN
 from mininet.command import Command
 
 SWITCH_PORT_BASE = 1  # For OF > 0.9, switch ports start at 1 rather than zero
@@ -498,6 +498,7 @@ class UserSwitch( Switch ):
         """Init.
            name: name for the switch"""
         Switch.__init__( self, name, **kwargs )
+        pathCheck( 'ofdatapath', 'ofprotocol' )
 
     @staticmethod
     def setup():
@@ -556,6 +557,7 @@ class KernelSwitch( Switch ):
     def setup():
         "Ensure any dependencies are loaded; if not, try to load them."
         moduleDeps( subtract = OVS_KMOD, add = OF_KMOD )
+        pathCheck( 'ofprotocol' )
 
     def start( self, controllers ):
         "Start up reference kernel datapath."
@@ -568,7 +570,7 @@ class KernelSwitch( Switch ):
         if self.defaultMAC:
             self.cmd( 'ifconfig', self.intf, 'hw', 'ether', self.defaultMAC )
         ports = sorted( self.ports.values() )
-        if len( ports ) != ports[ -1 ] + 1:
+        if len( ports ) != ports[ -1 ] + 1 - self.portBase:
             raise Exception( 'only contiguous, zero-indexed port ranges'
                             'supported: %s' % ports )
         intfs = [ self.intfs[ port ] for port in ports ]
@@ -609,6 +611,7 @@ class OVSKernelSwitch( Switch ):
     def setup():
         "Ensure any dependencies are loaded; if not, try to load them."
         moduleDeps( subtract = OF_KMOD, add = OVS_KMOD )
+        pathCheck( 'ovs-dpctl', 'ovs-openflowd' )
 
     def start( self, controllers ):
         "Start up kernel datapath."
@@ -625,7 +628,7 @@ class OVSKernelSwitch( Switch ):
             mac_str = ' --datapath-id=0000' + \
                       ''.join( self.defaultMAC.split( ':' ) ) + ' '
         ports = sorted( self.ports.values() )
-        if len( ports ) != ports[ -1 ]:
+        if len( ports ) != ports[ -1 ] + 1 - self.portBase:
             raise Exception( 'only contiguous, one-indexed port ranges '
                             'supported: %s' % self.intfs )
         intfs = [ self.intfs[ port ] for port in ports ]
@@ -662,6 +665,7 @@ class Controller( Node ):
     def start( self ):
         """Start <controller> <args> on controller.
            Log to /tmp/cN.log"""
+        pathCheck( self.controller )
         cout = '/tmp/' + self.name + '.log'
         if self.cdir is not None:
             self.cmd( 'cd ' + self.cdir )
