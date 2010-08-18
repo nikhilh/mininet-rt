@@ -21,6 +21,14 @@ def checkRun( cmd ):
 
 # pylint doesn't understand explicit type checking
 # pylint: disable-msg=E1103
+def shellOutput(cmd):
+    p = Popen(cmd, shell=True, stdout=PIPE)
+    return p.communicate()[0]
+
+def shellCmd(cmd):
+    ret = call(cmd, shell=True)
+    return ret
+
 
 def quietRun( *cmd ):
     """Run a command, routing stderr to stdout, and return the output.
@@ -199,6 +207,9 @@ def makeNumeric( s ):
         return float( s )
     else:
         return s
+
+def numCores():
+    return 8
 
 
 # Other stuff we use

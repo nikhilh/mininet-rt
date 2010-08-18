@@ -51,6 +51,7 @@ from time import sleep
 from mininet.log import info, error, debug
 from mininet.util import quietRun, makeIntfPair, moveIntf, isShellBuiltin
 from mininet.moduledeps import moduleDeps, OVS_KMOD, OF_KMOD, TUN
+from mininet.command import Command
 
 PORT_BASE = 1  # Port numbering to start from.  OF > v0.9 is 1-indexed.
 
@@ -72,15 +73,40 @@ class Node( object ):
         self.inNamespace = inNamespace
         self.defaultIP = defaultIP
         self.defaultMAC = defaultMAC
-        opts = '-cdp'
+	#opts = '-cdp'
+	lxc_opts = []
+        # Open shell via lxc-execute
         if self.inNamespace:
-            opts += 'n'
-        cmd = [ 'mnexec', opts, 'bash', '-m' ]
-        self.shell = Popen( cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
-            close_fds=False )
+	    #opts += 'n'
+            lxc_opts = ['lxc-execute', '-n', self.name, '-f', '/etc/mn/host.conf', '--']
+	#cmd = ['mnexec', opts] + lxc_opts + ['/bin/bash', '-m']
+	cmd = lxc_opts + ['/bin/bash']
+	print cmd
+	if(self.inNamespace):
+	    self.shell = Popen( cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
+		close_fds=True)
+	else:
+	    self.shell = Popen( cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
+		close_fds=False )
         self.stdin = self.shell.stdin
         self.stdout = self.shell.stdout
-        self.pid = self.shell.pid
+        sleep(0.10)
+	# Get pid via lxc-ps for init
+	self.pid = -1
+	if(self.inNamespace):
+	    pid_cmd = ['lxc-ps', '-n', self.name, 'a']
+	    pidp = Popen( pid_cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
+		close_fds=False )
+	    pid_regex = re.compile('(' + self.name + ')' + '\s+(\d+).*lxc-init')
+	    for line in pidp.stdout.readlines():
+		print line
+		pid_match = pid_regex.match(line)
+		if(pid_match is not None):
+		    self.pid = int(pid_match.group(2))
+		    break
+	else:
+	    self.pid = self.shell.pid
+
         self.pollOut = select.poll()
         self.pollOut.register( self.stdout )
         # Maintain mapping between file descriptors and nodes
@@ -100,6 +126,11 @@ class Node( object ):
         self.waiting = False
         # Stash additional information as desired
         self.args = kwargs
+
+	if(self.pid < 0):
+            error("Could not find init-pid of host " + self.name)
+	    print self.waitOutput()
+            exit(1) 
 
     @classmethod
     def fdToNode( cls, fd ):
@@ -148,6 +179,8 @@ class Node( object ):
     def terminate( self ):
         "Send kill signal to Node and clean up after it."
         os.kill( self.pid, signal.SIGKILL )
+	if(self.inNamespace):
+	    quietRun('lxc-destroy -n ' + self.name)
         self.cleanup()
 
     def stop( self ):
@@ -244,6 +277,16 @@ class Node( object ):
         """Call cmd and printing its output
            cmd: string"""
         return self.cmd( *args, **{ 'verbose': True } )
+
+    def lxcSendCmd(self, c):
+	"""Run a command in an lxc container
+	   c: a command string or a list of command substrings
+	   return: a Command object"""
+        if(not self.inNamespace):
+	    return None
+        lxc_attach = ['lxc-attach', '--name', self.name, '--']
+        lxc_attach += c.split(' ')
+        return Command(lxc_attach)
 
     # Interface management, configuration, and routing
 
@@ -426,7 +469,9 @@ class UserSwitch( Switch ):
     @staticmethod
     def setup():
         "Ensure any dependencies are loaded; if not, try to load them."
-        moduleDeps( add = TUN )
+	# TUN is inbuilt into modern kernels
+	if(not os.path.exists("/dev/net/tun")):
+	    moduleDeps( add = TUN )
 
     def start( self, controllers ):
         """Start OpenFlow reference user datapath.
