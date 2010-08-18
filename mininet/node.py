@@ -489,7 +489,6 @@ class Switch( Node ):
         ports = self.intfs.keys()
         if ports:
             intf = self.intfs[ max( ports ) ]
-        print "RETURNING", intf
         return intf
 
     def sendCmd( self, *cmd, **kwargs ):
