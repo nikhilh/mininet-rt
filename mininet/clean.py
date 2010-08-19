@@ -11,6 +11,8 @@ nothing irreplaceable!
 """
 
 from subprocess import Popen, PIPE
+import os
+import exceptions
 
 from mininet.log import info
 from mininet.term import cleanUpScreens
@@ -24,7 +26,7 @@ def cleanup():
     """Clean up junk which might be left over from old runs;
        do fast stuff before slow dp and link removal!"""
 
-    info("*** Removing excess controllers/ofprotocols/ofdatapaths/pings/noxes"
+    info("*** Removing excess controllers/ofprotocols/ofdatapaths/pings/noxes/containers"
          "\n")
     zombies = 'controller ofprotocol ofdatapath ping nox_core lt-nox_core '
     zombies += 'ovs-openflowd udpbwtest'
@@ -50,5 +52,28 @@ def cleanup():
     for link in links:
         if link != '':
             sh( "ip link del " + link )
+
+    info( "*** Removing remaining containers\n" )
+    containers = sh('lxc-ls\n').rstrip().split('\n')
+    for c in containers:
+        if(len(c) == 0):
+            continue
+        sh('lxc-kill -n ' + c + ' 9\n')
+        sh('lxc-destroy -n ' + 'c\n')
+
+    info( "*** Removing remaining cgroups\n" )
+    cgs = [name for name in os.listdir('/cgroup') if os.path.isdir(os.path.join('/cgroup/', name))]
+    for cg in cgs:
+        is_pid = False
+        try:
+            int(cg)
+            is_pid = True
+        except exceptions.ValueError:
+            pass
+        if is_pid:
+            sh('kill -9 ' + cg + '\n')
+        sh('rmdir ' + os.path.join('/cgroup/', cg) + '\n')
+
+
 
     info( "*** Cleanup complete.\n" )
