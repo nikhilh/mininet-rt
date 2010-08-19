@@ -8,6 +8,10 @@ from subprocess import call, check_call, Popen, PIPE, STDOUT
 from mininet.log import error
 
 # Command execution support
+def getCmd(cmd):
+    '''Get the full path of the executable'''
+    p = Popen(['which', cmd], stdout=PIPE)
+    return p.stdout.readline().rstrip()
 
 def run( cmd ):
     """Simple interface to subprocess.call()

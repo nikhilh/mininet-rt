@@ -91,16 +91,16 @@ class Node( object ):
 		close_fds=False )
         self.stdin = self.shell.stdin
         self.stdout = self.shell.stdout
-        sleep(0.10)
 	# Get pid via lxc-ps for init
 	self.pid = -1
 	if(self.inNamespace):
+            sleep(1)
 	    pid_cmd = ['lxc-ps', '-n', self.name, 'a']
 	    pidp = Popen( pid_cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
 		close_fds=False )
 	    pid_regex = re.compile('(' + self.name + ')' + '\s+(\d+).*lxc-init')
 	    for line in pidp.stdout.readlines():
-		print line
+		print line,
 		pid_match = pid_regex.match(line)
 		if(pid_match is not None):
 		    self.pid = int(pid_match.group(2))

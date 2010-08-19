@@ -10,7 +10,7 @@ import re
 from subprocess import Popen
 
 from mininet.log import error
-from mininet.util import quietRun
+from mininet.util import quietRun, getCmd
 
 def quoteArg( arg ):
     "Quote an argument if it contains spaces."
@@ -26,22 +26,25 @@ def makeTerm( node, title='Node', term='xterm' ):
     if not node.inNamespace:
         title += ' (root)'
     cmds = {
-        'xterm': [ 'xterm', '-title', title, '-e' ],
-        'gterm': [ 'gnome-terminal', '--title', title, '-e' ]
+        'xterm': [ getCmd('xterm'), '-title', title, '-e' ],
+        'gterm': [ getCmd('gnome-terminal'), '--title', title, '-e' ]
     }
     if term not in cmds:
         error( 'invalid terminal type: %s' % term )
         return
+    lxc_cmd = []
+    if node.inNamespace:
+        lxc_cmd = ['lxc-attach', '--name', node.name, '--']
     if not node.execed:
         node.cmd( 'screen -dmS ' + 'mininet.' + node.name)
-        args = [ 'screen', '-D', '-RR', '-S', 'mininet.' + node.name ]
+        args = [ getCmd('screen'), '-D', '-RR', '-S', 'mininet.' + node.name ]
     else:
-        args = [ 'sh', '-c', 'exec tail -f /tmp/' + node.name + '*.log' ]
+        args = [ getCmd('sh'), '-c', 'exec tail -f /tmp/' + node.name + '*.log' ]
     if term == 'gterm':
         # Compress these for gnome-terminal, which expects one token
         # to follow the -e option
         args = [ ' '.join( [ quoteArg( arg ) for arg in args ] ) ]
-    return Popen( cmds[ term ] + args )
+    return Popen( lxc_cmd + cmds[ term ] + args )
 
 def cleanUpScreens():
     "Remove moldy old screen sessions."
