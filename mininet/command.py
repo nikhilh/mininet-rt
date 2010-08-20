@@ -8,7 +8,7 @@ class Command:
     if type(c) == type(''):
       c = c.split(' ')
     self.cmd = c
-    self.p = Popen(c, stdout=PIPE, stdin=PIPE, stderr=PIPE)
+    self.p = Popen(c, stdout=PIPE, stdin=PIPE)
 
   def readFull(self):
     # warning, will BLOCK until we read all output
