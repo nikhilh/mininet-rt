@@ -10,7 +10,7 @@ from mininet.log import error
 # Command execution support
 def getCmd(cmd):
     '''Get the full path of the executable'''
-    p = Popen(['which', cmd], stdout=PIPE)
+    p = Popen(['which', cmd.rstrip()], stdout=PIPE)
     return p.stdout.readline().rstrip()
 
 def run( cmd ):

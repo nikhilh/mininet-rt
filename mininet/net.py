@@ -96,7 +96,7 @@ from mininet.cli import CLI
 from mininet.log import info, error, debug, output
 from mininet.node import Host, UserSwitch, KernelSwitch, Controller
 from mininet.node import ControllerParams
-from mininet.util import quietRun, fixLimits
+from mininet.util import quietRun, fixLimits, getCmd
 from mininet.util import createLink, macColonHex, ipStr, ipParse
 from mininet.term import cleanUpScreens, makeTerms
 
@@ -469,12 +469,6 @@ class Mininet( object ):
         """Parse iperf output and return bandwidth.
            iperfOutput: string
            returns: result string"""
-        #r = r'([\d\.]+ \w+/sec)'
-        #m = re.search( r, iperfOutput )
-        #if m:
-        #    return m.group( 1 )
-        #else:
-        #    raise Exception( 'could not parse iperf output: ' + iperfOutput )
         bw_str = iperfOutput.rstrip().split(',')[-1]
         bw_pretty = ''
         try:
@@ -497,22 +491,20 @@ class Mininet( object ):
         output( '*** Iperf: testing ' + l4Type + ' bandwidth between ' )
         output( "%s and %s\n" % ( client.name, server.name ) )
         server.cmd( 'killall -9 iperf' )
-        iperfArgs = 'iperf '
+        iperfArgs = getCmd('iperf') + ' '
         bwArgs = ''
         if l4Type == 'UDP':
             iperfArgs += '-u '
             bwArgs = '-b ' + udpBw + ' '
         elif l4Type != 'TCP':
             raise Exception( 'Unexpected l4 type: %s' % l4Type )
-        server.sendCmd( iperfArgs + '-yc -s', printPid=True )
-        servout = ''
-        while server.lastPid is None:
-            servout += server.monitor()
-        cliout = client.cmd( iperfArgs + '-yc -t 5 -c ' + server.IP() + ' ' +
+        sp = server.lxcSendCmd( iperfArgs + '-yc -s')
+        cp = client.lxcSendCmd( iperfArgs + '-yc -t 5 -c ' + server.IP() + ' ' +
                            bwArgs )
+        cliout = cp.readFull()
+        servout = sp.readLine()
+        sp.kill()
         debug( 'Client output: %s\n' % cliout )
-        server.sendInt()
-        servout += server.waitOutput()
         debug( 'Server output: %s\n' % servout )
         result = [ self._parseIperf( servout ), self._parseIperf( cliout ) ]
         if l4Type == 'UDP':
