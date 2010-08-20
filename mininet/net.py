@@ -261,6 +261,29 @@ class Mininet( object ):
             quietRun( 'renice +18 -p ' + repr( host.pid ) )
             info( host.name + ' ' )
         info( '\n' )
+    
+    def configLinks( self ):
+        """Configures properties for all links in the network.
+        Properties of links include:
+        * bandwidth
+        * latency
+
+        Other properties that can be set, though not a property 
+        of a link:
+        * drop probability
+        * packet reoder probability
+        * packet corruption
+        * packet duplication (?!)
+        """
+        # Each node can potentially have its own 
+        # link configurations.  They might read configuration
+        # from a file or a 'settings' module.
+        # Naming: bandwidth is a property of the NIC and not
+        # the link.  drop probability depends on so many factors..
+
+        for n in self.hosts + self.switches:
+            n.configLinks()
+        info('done!\n')
 
     def buildFromTopo( self, topo ):
         """Build mininet from a topology object
@@ -273,6 +296,8 @@ class Mininet( object ):
             mac = macColonHex( nodeId ) if self.setMacs else None
             ip = topo.ip( nodeId )
             node = addMethod( name, mac=mac, ip=ip )
+            # store the id of the node, we need it for rate-setting
+            node.id = nodeId
             self.idToNode[ nodeId ] = node
             info( name + ' ' )
 
@@ -320,6 +345,8 @@ class Mininet( object ):
             self.configureControlNetwork()
         info( '*** Configuring hosts\n' )
         self.configHosts()
+        info('*** Configuring links\n')
+        self.configLinks()
         if self.xterms:
             self.startTerms()
         if self.autoSetMacs:

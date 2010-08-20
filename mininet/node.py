@@ -49,7 +49,7 @@ from subprocess import Popen, PIPE, STDOUT
 from time import sleep
 
 from mininet.log import info, error, debug
-from mininet.util import quietRun, makeIntfPair, moveIntf, isShellBuiltin, numCores
+from mininet.util import quietRun, makeIntfPair, moveIntf, isShellBuiltin, numCores, getCmd
 from mininet.moduledeps import moduleDeps, pathCheck, OVS_KMOD, OF_KMOD, TUN
 from mininet.command import Command
 
@@ -263,7 +263,7 @@ class Node( object ):
 	   c: a command string or a list of command substrings
 	   return: a Command object"""
         if(not self.inNamespace):
-	    return None
+	    return Command(c)
         lxc_attach = ['lxc-attach', '--name', self.name, '--']
         lxc_attach += c.split(' ')
         return Command(lxc_attach)
@@ -377,6 +377,21 @@ class Node( object ):
         node1.registerIntf( intf1, node2, intf2 )
         node2.registerIntf( intf2, node1, intf1 )
         return intf1, intf2
+    
+    def configLinks(self):
+        """Configure the node's links and set its properties."""
+        tc = getCmd('tc')
+        for intf in self.intfs.values():
+            info( intf + '(100Mbit,1ms)\n' )
+            
+            cmds = [
+                #'%s qdisc del dev %s root',
+                '%s qdisc add dev %s root handle 1:0 htb default 1',
+                '%s class add dev %s parent 1:0 classid 1:1 htb rate 100Mbit burst 15k',
+                '%s qdisc add dev %s parent 1:1 handle 10:0 netem delay 1ms'
+            ]
+
+            map(lambda s: self.lxcSendCmd(s % (tc, intf)).wait(), cmds)
 
     def deleteIntfs( self ):
         "Delete all of our interfaces."
