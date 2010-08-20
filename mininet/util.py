@@ -3,6 +3,7 @@
 from time import sleep
 from resource import setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
 import select
+import commands
 from subprocess import call, check_call, Popen, PIPE, STDOUT
 
 from mininet.log import error
@@ -213,7 +214,10 @@ def makeNumeric( s ):
         return s
 
 def numCores():
-    return 8
+    try:
+        return int(commands.getoutput('cat /proc/cpuinfo | grep processor | wc -l'))
+    except ValueError:
+        return 0
 
 
 # Other stuff we use

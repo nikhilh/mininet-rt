@@ -49,7 +49,7 @@ from subprocess import Popen, PIPE, STDOUT
 from time import sleep
 
 from mininet.log import info, error, debug
-from mininet.util import quietRun, makeIntfPair, moveIntf, isShellBuiltin
+from mininet.util import quietRun, makeIntfPair, moveIntf, isShellBuiltin, numCores
 from mininet.moduledeps import moduleDeps, pathCheck, OVS_KMOD, OF_KMOD, TUN
 from mininet.command import Command
 
@@ -290,6 +290,22 @@ class Node( object ):
         if(self.pid < 0):
             return False
         return True
+
+    def lxcSetCPUFrac(self, f=None):
+        if(not self.inNamespace):
+            return
+
+        quota = -1
+        try:
+            period = int(quietRun('lxc-cgroup --name=' + self.name + ' cpu.cfs_period_us').rstrip())
+        except ValueError:
+            error('Could not get cpu.cfs_period_us for node ' + self.name)
+            return
+        if(f is None or f <= 0.0 or f >= numCores()):
+            quota = -1
+        else:
+            quota = int(f * period)
+        quietRun('lxc-cgroup --name=' + self.name + ' cpu.cfs_quota_us ' + str(quota))
 
     # Interface management, configuration, and routing
 
