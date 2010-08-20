@@ -74,13 +74,10 @@ class Node( object ):
         self.inNamespace = inNamespace
         self.defaultIP = defaultIP
         self.defaultMAC = defaultMAC
-	#opts = '-cdp'
 	lxc_opts = []
         # Open shell via lxc-execute
         if self.inNamespace:
-	    #opts += 'n'
             lxc_opts = ['lxc-execute', '-n', self.name, '-f', '/etc/mn/host.conf', '--']
-	#cmd = ['mnexec', opts] + lxc_opts + ['/bin/bash', '-m']
 	cmd = lxc_opts + ['/bin/bash']
 	print cmd
 	if(self.inNamespace):
@@ -91,22 +88,8 @@ class Node( object ):
 		close_fds=False )
         self.stdin = self.shell.stdin
         self.stdout = self.shell.stdout
-	# Get pid via lxc-ps for init
+	# pid will be set later via lxcSetPid()
 	self.pid = -1
-	if(self.inNamespace):
-            sleep(1)
-	    pid_cmd = ['lxc-ps', '-n', self.name, 'a']
-	    pidp = Popen( pid_cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
-		close_fds=False )
-	    pid_regex = re.compile('(' + self.name + ')' + '\s+(\d+).*lxc-init')
-	    for line in pidp.stdout.readlines():
-		print line,
-		pid_match = pid_regex.match(line)
-		if(pid_match is not None):
-		    self.pid = int(pid_match.group(2))
-		    break
-	else:
-	    self.pid = self.shell.pid
 
         self.pollOut = select.poll()
         self.pollOut.register( self.stdout )
@@ -128,11 +111,6 @@ class Node( object ):
         self.waiting = False
         # Stash additional information as desired
         self.args = kwargs
-
-	if(self.pid < 0):
-            error("Could not find init-pid of host " + self.name)
-	    print self.waitOutput()
-            exit(1) 
 
     @classmethod
     def fdToNode( cls, fd ):
@@ -289,6 +267,29 @@ class Node( object ):
         lxc_attach = ['lxc-attach', '--name', self.name, '--']
         lxc_attach += c.split(' ')
         return Command(lxc_attach)
+
+    def lxcSetPid(self, ps_out=None):
+        if(not self.inNamespace):
+            self.pid = self.shell.pid
+            return
+        #it's an lxc container
+        if(ps_out is None):
+            pid_cmd = ['lxc-ps', '-n', self.name, 'a']
+            pidp = Popen( pid_cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
+                close_fds=False )
+            ps_out = pidp.stdout.readlines()
+        pid_regex = re.compile('(' + self.name + ')' + '\s+(\d+).*lxc-init')
+        for line in ps_out:
+            #print line,
+            pid_match = pid_regex.match(line)
+            if(pid_match is not None):
+                self.pid = int(pid_match.group(2))
+                return
+
+    def lxcCheckPid(self):
+        if(self.pid < 0):
+            return False
+        return True
 
     # Interface management, configuration, and routing
 

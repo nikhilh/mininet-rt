@@ -91,6 +91,7 @@ import re
 import select
 import signal
 from time import sleep
+from subprocess import Popen, PIPE
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output
@@ -289,6 +290,19 @@ class Mininet( object ):
         info( '\n*** Adding switches:\n' )
         for switchId in sorted( topo.switches() ):
             addNode( 's', self.addSwitch, switchId )
+
+        # setup node pids
+        sleep(2)
+        pid_cmd = ['lxc-ps', 'a']
+        pidp = Popen( pid_cmd, stdout=PIPE)
+        ps_out = pidp.stdout.readlines()
+        for name, node in self.nameToNode.iteritems():
+            node.lxcSetPid(ps_out)
+            if(not node.lxcCheckPid()):
+                error("Could not find init-pid of host " + name)
+                print "\n".join(ps_out)
+                exit(1)
+
         info( '\n*** Adding links:\n' )
         for srcId, dstId in sorted( topo.edges() ):
             src, dst = self.idToNode[ srcId ], self.idToNode[ dstId ]
