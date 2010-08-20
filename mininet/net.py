@@ -469,12 +469,20 @@ class Mininet( object ):
         """Parse iperf output and return bandwidth.
            iperfOutput: string
            returns: result string"""
-        r = r'([\d\.]+ \w+/sec)'
-        m = re.search( r, iperfOutput )
-        if m:
-            return m.group( 1 )
-        else:
-            raise Exception( 'could not parse iperf output: ' + iperfOutput )
+        #r = r'([\d\.]+ \w+/sec)'
+        #m = re.search( r, iperfOutput )
+        #if m:
+        #    return m.group( 1 )
+        #else:
+        #    raise Exception( 'could not parse iperf output: ' + iperfOutput )
+        bw_str = iperfOutput.rstrip().split(',')[-1]
+        bw_pretty = ''
+        try:
+            bw_pretty = str(float(bw_str)/10**6) + ' Mbits/sec'
+        except ValueError:
+            print 'Could not parse iperf output - returning empty string'
+        return bw_pretty
+
 
     def iperf( self, hosts=None, l4Type='TCP', udpBw='10M' ):
         """Run iperf between two hosts.
@@ -496,11 +504,11 @@ class Mininet( object ):
             bwArgs = '-b ' + udpBw + ' '
         elif l4Type != 'TCP':
             raise Exception( 'Unexpected l4 type: %s' % l4Type )
-        server.sendCmd( iperfArgs + '-s', printPid=True )
+        server.sendCmd( iperfArgs + '-yc -s', printPid=True )
         servout = ''
         while server.lastPid is None:
             servout += server.monitor()
-        cliout = client.cmd( iperfArgs + '-t 5 -c ' + server.IP() + ' ' +
+        cliout = client.cmd( iperfArgs + '-yc -t 5 -c ' + server.IP() + ' ' +
                            bwArgs )
         debug( 'Client output: %s\n' % cliout )
         server.sendInt()
