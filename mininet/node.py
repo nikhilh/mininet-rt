@@ -378,20 +378,34 @@ class Node( object ):
         node2.registerIntf( intf2, node1, intf1 )
         return intf1, intf2
     
-    def configLinks(self):
-        """Configure the node's links and set its properties."""
-        tc = getCmd('tc')
-        for intf in self.intfs.values():
-            info( intf + '(100Mbit,1ms)\n' )
-            
-            cmds = [
-                #'%s qdisc del dev %s root',
-                '%s qdisc add dev %s root handle 1:0 htb default 1',
-                '%s class add dev %s parent 1:0 classid 1:1 htb rate 100Mbit burst 15k',
-                '%s qdisc add dev %s parent 1:1 handle 10:0 netem delay 1ms'
-            ]
 
-            map(lambda s: self.lxcSendCmd(s % (tc, intf)).wait(), cmds)
+    def configPort(self, port, rate=100):
+        """Configure the node's port and set its properties."""
+        if(rate < 0 or rate > 1000):
+            return
+        tc = getCmd('tc')
+        try:
+            intf = self.intfs[port]
+        except KeyError:
+            error('Port %d does not exist on node %s' % (port, self.name))
+            return
+        info( intf + '(%dMbit,1ms)\n' % rate )
+        cmds = [
+            #'%s qdisc del dev %s root',
+            '%s qdisc add dev %s root handle 1:0 htb default 1',
+            '%s class add dev %s parent 1:0 classid 1:1 htb ' +
+            'rate %dMbit burst 15k' % rate,
+            '%s qdisc add dev %s parent 1:1 handle 10:0 netem delay 1ms'
+        ]
+        map(lambda s: self.lxcSendCmd(s % (tc, intf)).wait(), cmds)
+        
+    
+    def configLinks(self, rate=100):
+        """Configure the node's links and set its properties."""
+        if(rate < 0 or rate > 1000):
+            return
+        for port in self.intfs.keys():
+            self.configPort(port, rate)
 
     def deleteIntfs( self ):
         "Delete all of our interfaces."

@@ -109,7 +109,8 @@ class Mininet( object ):
                  cparams=ControllerParams( '10.0.0.0', 8 ),
                  build=True, xterms=False, cleanup=False,
                  inNamespace=False,
-                 autoSetMacs=False, autoStaticArp=False, listenPort=None ):
+                 autoSetMacs=False, autoStaticArp=False, listenPort=None,
+                 hostCPUFrac=0.2, linkRate=100):
         """Create Mininet object.
            topo: Topo (topology) object or None
            switch: Switch class
@@ -143,6 +144,10 @@ class Mininet( object ):
         self.idToNode = {}  # dpid to Node (Host/Switch) objects
         self.dps = 0  # number of created kernel datapaths
         self.terms = []  # list of spawned xterm processes
+
+        # Other properties
+        self.hostCPUFrac = hostCPUFrac
+        self.linkRate = linkRate
 
         init()
         switch.setup()
@@ -257,12 +262,13 @@ class Mininet( object ):
             hintf = host.intfs[ 0 ]
             host.setIP( hintf, host.defaultIP, self.cparams.prefixLen )
             host.setDefaultRoute( hintf )
+            host.lxcSetCPUFrac(self.hostCPUFrac)
             # You're low priority, dude!
             quietRun( 'renice +18 -p ' + repr( host.pid ) )
             info( host.name + ' ' )
         info( '\n' )
     
-    def configLinks( self ):
+    def configLinks( self, rate=100 ):
         """Configures properties for all links in the network.
         Properties of links include:
         * bandwidth
@@ -282,7 +288,7 @@ class Mininet( object ):
         # the link.  drop probability depends on so many factors..
 
         for n in self.hosts + self.switches:
-            n.configLinks()
+            n.configLinks(rate)
         info('done!\n')
 
     def buildFromTopo( self, topo ):
@@ -346,7 +352,7 @@ class Mininet( object ):
         info( '*** Configuring hosts\n' )
         self.configHosts()
         info('*** Configuring links\n')
-        self.configLinks()
+        self.configLinks(self.linkRate)
         if self.xterms:
             self.startTerms()
         if self.autoSetMacs:
