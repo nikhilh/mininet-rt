@@ -48,10 +48,10 @@ class Command:
 
   def wait(self):
     return self.p.wait()
-  
+
   def kill(self):
     return self.p.kill()
-  
+
   def signal(self, signal):
     return self.p.send_signal(signal)
 

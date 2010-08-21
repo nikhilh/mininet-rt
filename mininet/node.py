@@ -79,7 +79,6 @@ class Node( object ):
         if self.inNamespace:
             lxc_opts = ['lxc-execute', '-n', self.name, '-f', '/etc/mn/host.conf', '--']
 	cmd = lxc_opts + ['/bin/bash']
-	print cmd
 	if(self.inNamespace):
 	    self.shell = Popen( cmd, stdin=PIPE, stdout=PIPE, stderr=STDOUT,
 		close_fds=True)
@@ -280,7 +279,6 @@ class Node( object ):
             ps_out = pidp.stdout.readlines()
         pid_regex = re.compile('(' + self.name + ')' + '\s+(\d+).*lxc-init')
         for line in ps_out:
-            #print line,
             pid_match = pid_regex.match(line)
             if(pid_match is not None):
                 self.pid = int(pid_match.group(2))
