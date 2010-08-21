@@ -263,9 +263,10 @@ class Node( object ):
 	   return: a Command object"""
         if(not self.inNamespace):
 	    return Command(c)
+        mnexec = ['mnexec', '-cd']
         lxc_attach = ['lxc-attach', '--name', self.name, '--']
         lxc_attach += c.split(' ')
-        return Command(lxc_attach)
+        return Command(mnexec + lxc_attach)
 
     def lxcSetPid(self, ps_out=None):
         if(not self.inNamespace):

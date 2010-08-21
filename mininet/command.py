@@ -1,5 +1,7 @@
 "Command class - run a command inside a node"
 
+import os
+import signal
 from subprocess import Popen, PIPE
 
 class Command:
@@ -9,6 +11,9 @@ class Command:
       c = c.split(' ')
     self.cmd = c
     self.p = Popen(c, stdout=PIPE, stdin=PIPE)
+    self.pid = self.p.pid
+    self.sid = os.getsid(self.pid)
+    self.detached  = (self.sid != os.getsid(os.getpid()))
 
   def readFull(self):
     # warning, will BLOCK until we read all output
@@ -50,7 +55,10 @@ class Command:
     return self.p.wait()
 
   def kill(self):
-    return self.p.kill()
+    if self.detached:
+      return os.killpg(self.pid, signal.SIGKILL)
+    else:
+      return self.p.kill()
 
   def signal(self, signal):
     return self.p.send_signal(signal)
