@@ -323,16 +323,22 @@ class Mininet( object ):
             addNode( 's', self.addSwitch, switchId )
 
         # setup node pids
-        sleep(2)
+        info( '\n*** Setting node pids: ' )
+        sleep(1)
         pid_cmd = ['lxc-ps', 'a']
-        pidp = Popen( pid_cmd, stdout=PIPE)
-        ps_out = pidp.stdout.readlines()
-        for name, node in self.nameToNode.iteritems():
-            node.lxcSetPid(ps_out)
-            if(not node.lxcCheckPid()):
-                error("Could not find init-pid of host " + name)
-                print "\n".join(ps_out)
-                exit(1)
+        all_pid_set = False | (len(self.nameToNode) <= 0)
+        while not all_pid_set:
+            info('*')
+            pidp = Popen( pid_cmd, stdout=PIPE)
+            ps_out = pidp.stdout.readlines()
+            all_pid_set = True
+            for name, node in self.nameToNode.iteritems():
+                if(not node.lxcCheckPid()):
+                    all_pid_set &= node.lxcSetPid(ps_out)
+                if(not all_pid_set):
+                    break
+            sleep(1)
+        info('\n')
 
         info( '\n*** Adding links:\n' )
         for srcId, dstId in sorted( topo.edges() ):

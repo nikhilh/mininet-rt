@@ -269,9 +269,14 @@ class Node( object ):
         return Command(mnexec + lxc_attach)
 
     def lxcSetPid(self, ps_out=None):
+        '''Takes the output of lxc-ps and 
+        sets the pid of the node using that
+        returns true if it could find the pid of lxc-init
+        of the container
+        returns false otherwise'''
         if(not self.inNamespace):
             self.pid = self.shell.pid
-            return
+            return True
         #it's an lxc container
         if(ps_out is None):
             pid_cmd = ['lxc-ps', '-n', self.name, 'a']
@@ -283,12 +288,11 @@ class Node( object ):
             pid_match = pid_regex.match(line)
             if(pid_match is not None):
                 self.pid = int(pid_match.group(2))
-                return
+                return True
+        return False
 
     def lxcCheckPid(self):
-        if(self.pid < 0):
-            return False
-        return True
+        return (self.pid > 0)
 
     def lxcSetCPUFrac(self, f=None):
         if(not self.inNamespace):

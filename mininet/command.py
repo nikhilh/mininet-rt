@@ -11,9 +11,6 @@ class Command:
       c = c.split(' ')
     self.cmd = c
     self.p = Popen(c, stdout=PIPE, stdin=PIPE)
-    self.pid = self.p.pid
-    self.sid = os.getsid(self.pid)
-    self.detached  = (self.sid != os.getsid(os.getpid()))
 
   def readFull(self):
     # warning, will BLOCK until we read all output
@@ -55,10 +52,7 @@ class Command:
     return self.p.wait()
 
   def kill(self):
-    if self.detached:
-      return os.killpg(self.pid, signal.SIGKILL)
-    else:
-      return self.p.kill()
+    return os.kill(-self.p.pid, signal.SIGKILL)
 
   def signal(self, signal):
     return self.p.send_signal(signal)
