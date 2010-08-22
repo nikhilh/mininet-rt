@@ -550,6 +550,45 @@ class Switch( Node ):
             error( '*** Error: %s has execed and cannot accept commands' %
                      self.name )
 
+class Bridge(Switch):
+    """ The Linux Bridge  """
+
+    def __init__(self, name, **kwargs):
+        Switch.__init__(self, name, **kwargs)
+
+    @staticmethod
+    def setup():
+        pass # for now
+
+    def start(self, controllers):
+        # Controller support isnt there for the Linux Bridge
+        brctl = getCmd("brctl")
+        ifconfig = getCmd("ifconfig")
+
+        cmds = [
+            "%s delbr %s",
+            "%s addbr %s"
+        ]
+
+        map(lambda s: quietRun(s % (brctl, self.name)), cmds)
+
+        for intf in self.intfs.values():
+            #don't do this, it will remove the qdiscs :(
+            #quietRun("%s %s down" % (ifconfig, intf))
+            quietRun("%s addif %s %s" % (brctl, self.name, intf))
+        
+        quietRun("%s %s up" % (ifconfig, self.name))
+
+        for intf in self.intfs.values():
+            quietRun("%s %s up" % (ifconfig, intf))
+        
+
+    def stop(self):
+        ifconfig = getCmd("ifconfig")
+        quietRun("%s %s down" % (ifconfig, self.name))
+        self.deleteIntfs()
+
+
 class UserSwitch( Switch ):
     "User-space switch."
 
