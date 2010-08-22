@@ -286,7 +286,17 @@ class Mininet( object ):
         # from a file or a 'settings' module.
         # Naming: bandwidth is a property of the NIC and not
         # the link.  drop probability depends on so many factors..
+        
+        # parallelise all rate setting
+        #import eventlet
+        #this doesn't seem to speed up anything; let's check this later.
+        #pool = eventlet.GreenPool(size=50)
 
+        # Force list generation 
+        #ans = list(pool.imap(
+        #    lambda n: n.configLinks(rate), 
+        #    self.hosts + self.switches))
+        
         for n in self.hosts + self.switches:
             n.configLinks(rate)
         info('done!\n')
@@ -406,7 +416,15 @@ class Mininet( object ):
         for switch in self.switches:
             info( switch.name + ' ')
             switch.start( self.controllers )
-        info( '\n' )
+
+        # TODO(jvimal): this is here because of some reason.
+        # Don't remove it.  ask me why it's here.
+        info('\n Waiting for switches to start ')
+        for i in xrange(0,5):
+            info('*')
+            sleep(1)
+        info(' Starting!\n')
+
 
     def stop( self ):
         "Stop the controller(s), switches and hosts"
