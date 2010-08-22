@@ -355,10 +355,10 @@ class Mininet( object ):
         if self.inNamespace:
             info( '*** Configuring control network\n' )
             self.configureControlNetwork()
-        info( '*** Configuring hosts\n' )
-        self.configHosts()
         info('*** Configuring links\n')
         self.configLinks(self.linkRate)
+        info( '*** Configuring hosts\n' )
+        self.configHosts()
         if self.xterms:
             self.startTerms()
         if self.autoSetMacs:
