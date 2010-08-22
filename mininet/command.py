@@ -3,6 +3,7 @@
 import os
 import signal
 from subprocess import Popen, PIPE
+import select
 
 class Command:
 
@@ -14,7 +15,31 @@ class Command:
 
   def readFull(self):
     # warning, will BLOCK until we read all output
-    return self.p.communicate()[0]
+    #return self.p.communicate()[0]
+    # communicate uses select() that cannot deal with more
+    # than 1024 open file descriptors per process.
+    # we use epoll.
+    ret = ''
+    epoll = select.epoll()
+    epoll.register(self.p.stdout.fileno(), select.EPOLLIN)
+    done = False
+    try:
+        while not done:
+            events = epoll.poll(1)
+            for fileno, event in events:
+                if fileno == self.p.stdout.fileno():
+                    if event & select.EPOLLIN:
+                        while True:
+                            data = self.p.stdout.read(1024)
+                            if len(data) == 0:
+                                done = True
+                                break
+                            ret += data
+            continue # while loop
+    finally:
+        epoll.unregister(self.p.stdout.fileno())
+        epoll.close()
+    return ret
 
   def readN(self, n):
     toread = n
