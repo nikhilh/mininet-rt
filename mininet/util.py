@@ -1,4 +1,5 @@
 "Utility functions for Mininet."
+from __future__ import generators
 
 from time import sleep
 from resource import setrlimit, RLIMIT_NPROC, RLIMIT_NOFILE
@@ -7,6 +8,7 @@ import commands
 from subprocess import call, check_call, Popen, PIPE, STDOUT
 
 from mininet.log import error
+
 
 # Command execution support
 def getCmd(cmd):
@@ -213,12 +215,24 @@ def makeNumeric( s ):
     else:
         return s
 
+ncores = 0
 def numCores():
+    global ncores
+    if(ncores > 0):
+        return ncores
     try:
-        return int(commands.getoutput('cat /proc/cpuinfo | grep processor | wc -l'))
+        ncores = int(commands.getoutput('cat /proc/cpuinfo | grep processor | wc -l'))
     except ValueError:
         return 0
+    return ncores
 
+def getCore():
+    nextCore = 0
+    while True:
+        yield nextCore
+        nextCore = (nextCore + 1) % numCores()
+
+getNextCore = getCore()
 
 # Other stuff we use
 

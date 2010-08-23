@@ -97,7 +97,7 @@ from mininet.cli import CLI
 from mininet.log import info, error, debug, output
 from mininet.node import Host, UserSwitch, KernelSwitch, Controller
 from mininet.node import ControllerParams
-from mininet.util import quietRun, fixLimits, getCmd
+from mininet.util import quietRun, fixLimits, getCmd, getNextCore
 from mininet.util import createLink, macColonHex, ipStr, ipParse
 from mininet.term import cleanUpScreens, makeTerms
 
@@ -262,7 +262,10 @@ class Mininet( object ):
             hintf = host.intfs[ 0 ]
             host.setIP( hintf, host.defaultIP, self.cparams.prefixLen )
             host.setDefaultRoute( hintf )
-            host.lxcSetCPUFrac(self.hostCPUFrac)
+            if(self.hostCPUFrac > 0):
+                host.lxcSetCPUFrac(self.hostCPUFrac)
+                #simple round-robin load-balancing
+                host.lxcSetCPU(getNextCore.next()) 
             # You're low priority, dude!
             quietRun( 'renice +18 -p ' + repr( host.pid ) )
             info( host.name + ' ' )

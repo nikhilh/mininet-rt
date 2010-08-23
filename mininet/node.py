@@ -310,6 +310,14 @@ class Node( object ):
             quota = int(f * period)
         quietRun('lxc-cgroup --name=' + self.name + ' cpu.cfs_quota_us ' + str(quota))
 
+    def lxcSetCPU(self, core):
+        '''Assign CPU core to a container
+        via simple round-robin load-balancing'''
+        if(not self.inNamespace):
+            return
+        cmd = 'lxc-cgroup --name=%s cpuset.cpus %d'% (self.name, core)
+        quietRun(cmd)
+
     # Interface management, configuration, and routing
 
     # BL notes: This might be a bit redundant or over-complicated.
