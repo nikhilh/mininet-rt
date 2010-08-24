@@ -97,7 +97,7 @@ from mininet.cli import CLI
 from mininet.log import info, error, debug, output
 from mininet.node import Host, UserSwitch, KernelSwitch, Controller
 from mininet.node import ControllerParams
-from mininet.util import quietRun, fixLimits, getCmd, getNextCore
+from mininet.util import quietRun, fixLimits, getCmd#, getNextCore
 from mininet.util import createLink, macColonHex, ipStr, ipParse
 from mininet.term import cleanUpScreens, makeTerms
 
@@ -110,7 +110,7 @@ class Mininet( object ):
                  build=True, xterms=False, cleanup=False,
                  inNamespace=False,
                  autoSetMacs=False, autoStaticArp=False, listenPort=None,
-                 hostCPUFrac=0.2, linkRate=100):
+                 hostCPUPeriod=500, hostCPUFrac=0.2, linkRate=100):
         """Create Mininet object.
            topo: Topo (topology) object or None
            switch: Switch class
@@ -147,6 +147,7 @@ class Mininet( object ):
 
         # Other properties
         self.hostCPUFrac = hostCPUFrac
+        self.hostCPUPeriod = hostCPUPeriod
         self.linkRate = linkRate
 
         init()
@@ -262,10 +263,11 @@ class Mininet( object ):
             hintf = host.intfs[ 0 ]
             host.setIP( hintf, host.defaultIP, self.cparams.prefixLen )
             host.setDefaultRoute( hintf )
+            host.lxcSetCPUPeriod(self.hostCPUPeriod)
             if(self.hostCPUFrac > 0):
                 host.lxcSetCPUFrac(self.hostCPUFrac)
                 #simple round-robin load-balancing
-                host.lxcSetCPU(getNextCore.next()) 
+                #host.lxcSetCPU(getNextCore.next()) 
             # You're low priority, dude!
             quietRun( 'renice +18 -p ' + repr( host.pid ) )
             info( host.name + ' ' )

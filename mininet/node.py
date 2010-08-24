@@ -294,6 +294,15 @@ class Node( object ):
     def lxcCheckPid(self):
         return (self.pid > 0)
 
+    def lxcSetCPUPeriod(self, t=500):
+        '''Specify cpu.cfs_period_us in ms'''
+        if(not self.inNamespace):
+            return
+        if(t < 0):
+            return
+        cmd = 'lxc-cgroup --name=%s cpu.cfs_quota_us %d' % (self.name, t)
+        quietRun(cmd)
+
     def lxcSetCPUFrac(self, f=None):
         if(not self.inNamespace):
             return
