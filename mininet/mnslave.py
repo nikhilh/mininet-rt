@@ -118,4 +118,12 @@ if __name__ == '__main__':
     # Register functions
     server.register_instance(MininetSlaveService())
     #Happy serving!
-    server.serve_forever()
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        if(net is not None):
+            net.stop()
+        net = None
+        cleanup()
+        print 'Bye bye'
+        exit(0)
